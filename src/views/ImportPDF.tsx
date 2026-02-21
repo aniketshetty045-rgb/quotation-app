@@ -21,9 +21,9 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
       const interval = setInterval(() => {
         setProgress(p => {
           if (p >= 95) return 95; // Wait for actual API response
-          return p + 1;
+          return p + 2; // Increment by 2 for faster progress
         });
-      }, 50);
+      }, 30); // Faster interval
       return () => clearInterval(interval);
     }
   }, [isProcessing]);

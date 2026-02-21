@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 export async function generateSmartDescription(productName: string): Promise<string> {
   try {
@@ -48,13 +48,12 @@ export async function parsePdfWithGemini(base64Pdf: string, docType: string) {
             },
           },
           {
-            text: `Extract all professional business data from this ${docType} PDF. 
-            Focus on identifying the customer details, every line item (name, quantity, price, tax rate), and the final totals.
-            If data is missing, use empty strings or 0.`,
+            text: `Extract business data from this ${docType} PDF. Return JSON with customer, items (name, qty, price), and totals.`,
           },
         ]
       },
       config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
