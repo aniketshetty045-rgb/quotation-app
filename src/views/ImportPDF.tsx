@@ -14,6 +14,7 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
   const [progress, setProgress] = useState(0);
   const [extractedData, setExtractedData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isProcessing) {
@@ -48,6 +49,12 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
         return;
       }
       setSelectedFile(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -169,8 +176,18 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
         </section>
 
         <section className="flex-1 flex flex-col gap-6">
-          <label className={`relative w-full aspect-[4/3] border-4 border-dashed rounded-[3rem] flex flex-col items-center justify-center gap-4 cursor-pointer transition-all active:scale-[0.98] group ${selectedFile ? 'border-blue-500/30 bg-blue-50/10' : 'border-slate-100 dark:border-slate-800 hover:border-blue-200 bg-slate-50/50 dark:bg-slate-900/50'}`}>
-            <input type="file" className="hidden" accept="application/pdf" onChange={handleFileChange} disabled={isProcessing} />
+          <div 
+            onClick={triggerFileInput}
+            className={`relative w-full aspect-[4/3] border-4 border-dashed rounded-[3rem] flex flex-col items-center justify-center gap-4 cursor-pointer transition-all active:scale-[0.98] group ${selectedFile ? 'border-blue-500/30 bg-blue-50/10' : 'border-slate-100 dark:border-slate-800 hover:border-blue-200 bg-slate-50/50 dark:bg-slate-900/50'}`}
+          >
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              className="hidden" 
+              accept=".pdf,application/pdf" 
+              onChange={handleFileChange} 
+              disabled={isProcessing} 
+            />
             
             <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center transition-all duration-500 ${isProcessing ? 'animate-pulse scale-90' : 'group-hover:scale-110'} ${selectedFile ? 'bg-blue-600 text-white shadow-2xl rotate-12' : 'bg-white dark:bg-slate-800 text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700'}`}>
                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -193,7 +210,7 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
                 className="absolute top-6 right-6 w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-lg flex items-center justify-center text-red-500 border border-slate-100 dark:border-slate-700"
               >✕</button>
             )}
-          </label>
+          </div>
 
           {error && <p className="text-red-500 text-[10px] font-black text-center uppercase tracking-widest">{error}</p>}
         </section>
