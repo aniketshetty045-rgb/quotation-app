@@ -57,7 +57,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onBack, onNavigate }) => {
             <SettingsItem icon={<GearThinIcon />} label="Date & Currency settings" onClick={() => onNavigate('date_currency')} />
             <SettingsItem icon={<ChartIcon />} label="Download Reports & Statements" onClick={() => onNavigate('download_reports')} />
             <SettingsItem icon={<ChartIcon />} label="Header Footer Template" onClick={() => onNavigate('header_footer')} />
-            <SettingsItem icon={<ImportIcon />} label="Import PDF" onClick={() => onNavigate('import_pdf')} />
           </div>
         </section>
 
