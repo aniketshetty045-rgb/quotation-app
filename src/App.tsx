@@ -18,6 +18,7 @@ import DateCurrencyEditor from './views/DateCurrencyEditor';
 import ReportDownloader from './views/ReportDownloader';
 import HeaderFooterEditor from './views/HeaderFooterEditor';
 import ImportPDF from './views/ImportPDF';
+import GeminiKeyEditor from './views/GeminiKeyEditor';
 import { Card } from './components/UI';
 
 const App: React.FC = () => {
@@ -75,6 +76,7 @@ const App: React.FC = () => {
     | 'profile'
     | 'change_password'
     | 'delete_account'
+    | 'gemini_key'
   >('dashboard');
   
   const [currentDocType, setCurrentDocType] = useState<DocType | null>(null);
@@ -460,6 +462,18 @@ const App: React.FC = () => {
 
   if (view === 'delete_account') {
     return <DeleteAccount onBack={() => setView('profile')} onDelete={handleDeleteAccount} />;
+  }
+
+  if (view === 'gemini_key') {
+    return (
+      <GeminiKeyEditor 
+        onBack={() => setView('settings_menu')} 
+        onSave={() => {
+          setView('settings_menu');
+          showToast("Gemini API Key saved!");
+        }} 
+      />
+    );
   }
 
   return (

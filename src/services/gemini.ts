@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 export async function generateSmartDescription(productName: string): Promise<string> {
   try {
-    const apiKey = (import.meta as any).env?.VITE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
+    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || localStorage.getItem('GEMINI_API_KEY');
     if (!apiKey) throw new Error("API Key missing");
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
@@ -18,7 +18,7 @@ export async function generateSmartDescription(productName: string): Promise<str
 
 export async function generateSmartTerms(docType: string): Promise<string> {
   try {
-    const apiKey = (import.meta as any).env?.VITE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
+    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || localStorage.getItem('GEMINI_API_KEY');
     if (!apiKey) throw new Error("API Key missing");
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
@@ -34,8 +34,8 @@ export async function generateSmartTerms(docType: string): Promise<string> {
 
 export async function parsePdfWithGemini(base64Pdf: string, docType: string) {
   try {
-    const apiKey = (import.meta as any).env?.VITE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) throw new Error("Gemini API Key is missing. Please check your environment variables.");
+    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || localStorage.getItem('GEMINI_API_KEY');
+    if (!apiKey) throw new Error("Gemini API Key is missing. Please check your environment variables or set it in Settings.");
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

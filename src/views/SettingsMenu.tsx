@@ -34,6 +34,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onBack, onNavigate }) => {
           <div className="space-y-1">
             <SettingsItem icon={<UserIcon />} label="Profile" onClick={() => onNavigate('profile')} />
             <SettingsItem icon={<BusinessIcon />} label="Business Info" onClick={() => onNavigate('business_setup')} />
+            <SettingsItem icon={<GearThinIcon />} label="Gemini API Key" onClick={() => onNavigate('gemini_key')} />
             <SettingsItem icon={<SubscriptionIcon />} label="Subscription" onClick={() => {}} />
             <SettingsItem icon={<LogoutIcon />} label="Logout" onClick={handleLogoutClick} />
           </div>
