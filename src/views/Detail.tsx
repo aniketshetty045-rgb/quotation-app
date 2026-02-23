@@ -1,4 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { Share } from '@capacitor/share';
 import { 
   BusinessInfo, Customer, TermCondition, Document, Settings 
 } from '../types';
@@ -119,6 +122,16 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
     const shareText = `*${doc.type.toUpperCase()} DOCUMENT*\n\n*No:* ${doc.docNumber}\n*Date:* ${formatDate(doc.date, settings.general.dateFormat)}\n*Customer:* ${customer?.name || 'Walk-in'}\n*Total:* ${currencySymbol} ${doc.grandTotal.toLocaleString()}\n\nGenerated via QuoteFlow Pro`;
     
     try {
+      const canShare = await Share.canShare();
+      if (canShare.value) {
+        await Share.share({
+          title: `${doc.type.toUpperCase()} ${doc.docNumber}`,
+          text: shareText,
+          dialogTitle: 'Share Document',
+        });
+        return;
+      }
+
       if (navigator.share) {
         await navigator.share({
           title: `${doc.type.toUpperCase()} ${doc.docNumber}`,
@@ -131,16 +144,73 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(shareText);
-          const goToWA = confirm('Details copied to clipboard! Share on WhatsApp instead?');
-          if (goToWA) {
-            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-          }
+          alert('Details copied to clipboard!');
         } else {
           throw new Error('Clipboard API unavailable');
         }
       } catch (clipErr) {
         alert('Sharing failed. Please try printing or downloading as PDF.');
       }
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!containerRef.current) return;
+    
+    const element = containerRef.current.querySelector('.pdf-page') as HTMLElement;
+    if (!element) return;
+
+    const originalScale = scale;
+    const originalTransform = element.style.transform;
+    const originalMargin = element.style.marginBottom;
+
+    // Force scale 1 and remove transform for capture to ensure quality
+    element.style.transform = 'none';
+    element.style.marginBottom = '0';
+    
+    try {
+      // Small delay to ensure scale reset is rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const canvas = await html2canvas(element, {
+        scale: 3, // Higher scale for better quality
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 800,
+        y: 0,
+        x: 0,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`${doc.type}_${doc.docNumber}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed', err);
+      alert('Failed to generate PDF. Please try printing instead.');
+    } finally {
+      // Restore original state
+      element.style.transform = originalTransform;
+      element.style.marginBottom = originalMargin;
+      setScale(originalScale);
     }
   };
 
@@ -191,7 +261,7 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
                    <p className="text-[10px] font-bold text-slate-600">{business.contactPerson}</p>
                    <p className="text-[9px] text-slate-500 font-medium leading-tight max-w-[200px] mx-auto mt-1">{business.address1}</p>
                    <div className="flex flex-col items-center mt-2 text-[9px] text-slate-500 font-bold">
-                      <span>📱 {business.phone} ✉️ {business.email}</span>
+                      <span>✉️ {business.email}</span>
                    </div>
                 </div>
                 <div className="w-1/3 text-right">
@@ -309,19 +379,19 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
              </div>
            )}
 
-           {docSetting?.bankDisplay === 'Yes' && business.bankDetails && (
+            {docSetting?.bankDisplay === 'Yes' && business.bankDetails && (
              <div className="mb-6 px-10">
                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 pb-1 border-b border-slate-200">BANK ACCOUNT DETAILS</p>
-                  <div className="grid grid-cols-2 gap-y-1.5 text-[9px] font-bold text-slate-700">
-                    <p><span className="text-slate-400 uppercase tracking-tighter mr-1">A/C NAME:</span> {business.bankDetails.accountName.toUpperCase()}</p>
-                    <p><span className="text-slate-400 uppercase tracking-tighter mr-1">BANK:</span> {business.bankDetails.bankName.toUpperCase()}</p>
-                    <p><span className="text-slate-400 uppercase tracking-tighter mr-1">A/C NO:</span> {business.bankDetails.accountNumber}</p>
-                    {business.bankDetails.upiId && <p><span className="text-slate-400 uppercase tracking-tighter mr-1">UPI ID:</span> {business.bankDetails.upiId}</p>}
+                  <div className="flex flex-wrap gap-x-8 gap-y-1.5 text-[9px] font-bold text-slate-700">
+                    <p className="min-w-[200px]"><span className="text-slate-400 uppercase tracking-tighter mr-1">A/C NAME:</span> {business.bankDetails.accountName.toUpperCase()}</p>
+                    <p className="min-w-[200px]"><span className="text-slate-400 uppercase tracking-tighter mr-1">BANK:</span> {business.bankDetails.bankName.toUpperCase()}</p>
+                    <p className="min-w-[200px]"><span className="text-slate-400 uppercase tracking-tighter mr-1">A/C NO:</span> {business.bankDetails.accountNumber}</p>
+                    {business.bankDetails.upiId && <p className="min-w-[200px]"><span className="text-slate-400 uppercase tracking-tighter mr-1">UPI ID:</span> {business.bankDetails.upiId}</p>}
                   </div>
                </div>
              </div>
-           )}
+            )}
 
            <div className="flex justify-between mt-auto pt-8 px-10 mb-10 min-h-[150px]">
               <div className="w-1/2 space-y-8">
@@ -363,13 +433,20 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
            <DetailNavBtn label="DUPLICATE" icon={<ClipboardIcon />} onClick={onDuplicate} />
            <DetailNavBtn label="EDIT" icon={<PencilIcon />} onClick={onEdit} />
            {doc.type === 'quotation' && <DetailNavBtn label="INVOICE" icon={<InvoiceIcon />} onClick={onConvert} />}
-           <DetailNavBtn label="SHARE" icon={<ShareArrowIcon />} onClick={handleShare} />
+           <DetailNavBtn label="SHARE" icon={<ShareArrowIcon />} onClick={() => handleShare()} />
            
            <div className="relative">
              <DetailNavBtn label="MORE" icon={<DotsIcon />} onClick={() => setShowMoreMenu(!showMoreMenu)} />
              
              {showMoreMenu && (
                 <div className="absolute bottom-full right-0 mb-6 w-56 bg-white dark:bg-slate-800 rounded-[1.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-slate-50 dark:border-slate-700 overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-[110]">
+                   <button 
+                     onClick={() => { setShowMoreMenu(false); handleDownloadPDF(); }}
+                     className="w-full px-6 py-4 text-left text-[13px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-4 transition-colors p-2 hover:text-blue-500 border-b border-slate-50 dark:border-slate-700"
+                   >
+                      <span className="text-lg grayscale brightness-125">📥</span>
+                      <span>Download PDF</span>
+                   </button>
                    <button 
                      onClick={() => { setShowMoreMenu(false); setShowDeleteConfirm(true); }}
                      className="w-full px-6 py-4 text-left text-[13px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-4 transition-colors p-2 hover:text-blue-500"
