@@ -44,8 +44,8 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
     setError(null);
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 10 * 1024 * 1024) {
-        setError("File size exceeds 10MB limit.");
+      if (file.size > 50 * 1024 * 1024) {
+        setError("File size exceeds 50MB limit.");
         return;
       }
       setSelectedFile(file);
@@ -147,13 +147,16 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
       </div>
 
       <div className="flex-1 p-8 space-y-8 overflow-y-auto no-scrollbar pb-32">
-        <div className="space-y-3 text-center">
+        <div className="space-y-3 text-center relative">
           <div className="w-16 h-16 bg-blue-500 rounded-[2rem] flex items-center justify-center text-white shadow-xl mx-auto mb-6">
              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
              </svg>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-white leading-tight tracking-tight">Magic Import</h2>
+          <div className="flex items-center justify-center gap-4">
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white leading-tight tracking-tight">Magic Import</h2>
+            <span className="text-[12px] font-bold text-blue-400 uppercase tracking-tight">max to max 50mb</span>
+          </div>
           <p className="text-[14px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs mx-auto">
             Our AI will automatically extract items, customers, and totals.
           </p>
@@ -200,7 +203,7 @@ const ImportPDF: React.FC<ImportPDFProps> = ({ onBack, onImport, initialType = '
                 {selectedFile ? selectedFile.name : 'Choose PDF'}
               </p>
               <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">
-                {selectedFile ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` : 'Max 10MB'}
+                {selectedFile ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` : 'Max 50MB'}
               </p>
             </div>
 

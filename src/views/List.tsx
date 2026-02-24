@@ -17,6 +17,7 @@ interface ListProps {
 const List: React.FC<ListProps> = ({ type, state, onSelect, onEdit, onDelete, onBack, onCreate }) => {
   const [search, setSearch] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'pdf' | 'copy_pdf'>('pdf');
 
   const docs = state.documents.filter((d: Document) => 
     d.type === type && (
@@ -24,6 +25,14 @@ const List: React.FC<ListProps> = ({ type, state, onSelect, onEdit, onDelete, on
       (state.customers.find((c: any) => c.id === d.customerId)?.name || '').toLowerCase().includes(search.toLowerCase())
     )
   );
+
+  // Filter based on active tab
+  // If 'copy_pdf' is selected, show documents that have '-COPY' in their docNumber
+  // If 'pdf' is selected, show documents that don't have '-COPY' in their docNumber
+  const filteredDocs = docs.filter((d: Document) => {
+    if (activeTab === 'copy_pdf') return d.docNumber.includes('-COPY');
+    return !d.docNumber.includes('-COPY');
+  });
 
   const formatDate = (dateStr: string, format: string) => {
     let date: Date;
@@ -72,7 +81,8 @@ const List: React.FC<ListProps> = ({ type, state, onSelect, onEdit, onDelete, on
             <h2 className="text-slate-900 dark:text-white font-bold text-xl capitalize">{type.replace('_', ' ')}s</h2>
           </div>
        </div>
-       <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-800">
+
+       <div className="px-6 py-4 bg-white dark:bg-slate-900 border-b dark:border-slate-800 sticky top-[76px] z-40 transition-colors">
          <PillInput 
             placeholder="Search by ID or customer..." 
             value={search} 
@@ -80,14 +90,29 @@ const List: React.FC<ListProps> = ({ type, state, onSelect, onEdit, onDelete, on
             icon={<span className="opacity-40 p-2 hover:text-blue-500 transition-colors">🔍</span>} 
           />
        </div>
+
+       <div className="flex border-b border-slate-100 dark:border-slate-800 sticky top-[152px] z-40 bg-white dark:bg-slate-950">
+          <button 
+            onClick={() => setActiveTab('pdf')}
+            className={`flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-all ${activeTab === 'pdf' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'}`}
+          >
+            pdf
+          </button>
+          <button 
+            onClick={() => setActiveTab('copy_pdf')}
+            className={`flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-all ${activeTab === 'copy_pdf' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'}`}
+          >
+            copy pdf
+          </button>
+        </div>
        <div className="flex-1 px-4 overflow-y-auto pt-4 pb-32 no-scrollbar">
-          {docs.length === 0 ? (
+          {filteredDocs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-300 dark:text-slate-700 space-y-4">
               <span className="text-6xl opacity-30">📁</span>
               <p className="font-bold uppercase tracking-widest text-sm">No {type}s found</p>
             </div>
           ) : (
-            docs.map((d: Document) => (
+            filteredDocs.map((d: Document) => (
               <div key={d.id} onClick={() => onSelect(d)} className="py-5 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center active:bg-slate-50 dark:active:bg-slate-900 px-4 transition-all cursor-pointer rounded-2xl mb-2 bg-slate-50/30 dark:bg-slate-900/40">
                  <div className="flex-1 min-w-0 pr-4">
                     <p className="font-black text-slate-800 dark:text-slate-100 text-base truncate">{state.customers.find((c:any) => c.id === d.customerId)?.name || 'Walk-in'}</p>

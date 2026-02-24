@@ -34,7 +34,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onBack, onNavigate }) => {
           <div className="space-y-1">
             <SettingsItem icon={<UserIcon />} label="Profile" onClick={() => onNavigate('profile')} />
             <SettingsItem icon={<BusinessIcon />} label="Business Info" onClick={() => onNavigate('business_setup')} />
-            <SettingsItem icon={<GearThinIcon />} label="Gemini API Key" onClick={() => onNavigate('gemini_key')} />
             <SettingsItem icon={<SubscriptionIcon />} label="Subscription" onClick={() => {}} />
             <SettingsItem icon={<LogoutIcon />} label="Logout" onClick={handleLogoutClick} />
           </div>
@@ -53,6 +52,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onBack, onNavigate }) => {
             <SettingsItem icon={<ToolsIcon />} label="Proforma Invoice Settings" onClick={() => onNavigate('setting_editor', 'proforma')} />
             <SettingsItem icon={<ToolsIcon />} label="Delivery Note Settings" onClick={() => onNavigate('setting_editor', 'delivery_note')} />
             <SettingsItem icon={<ToolsIcon />} label="Receipt Settings" onClick={() => onNavigate('setting_editor', 'receipt')} />
+            <SettingsItem icon={<ImportIcon />} label="Import PDF" onClick={() => onNavigate('import_pdf')} />
             <SettingsItem icon={<GearsIcon />} label="Column Heading (GST, HSN, Other Charges)" onClick={() => onNavigate('column_heading')} />
             <SettingsItem icon={<GearThinIcon />} label="Date & Currency settings" onClick={() => onNavigate('date_currency')} />
             <SettingsItem icon={<ChartIcon />} label="Download Reports & Statements" onClick={() => onNavigate('download_reports')} />

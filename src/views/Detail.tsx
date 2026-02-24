@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 import { 
   BusinessInfo, Customer, TermCondition, Document, Settings 
 } from '../types';
@@ -118,47 +120,11 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  const handleShare = async () => {
-    const shareText = `*${doc.type.toUpperCase()} DOCUMENT*\n\n*No:* ${doc.docNumber}\n*Date:* ${formatDate(doc.date, settings.general.dateFormat)}\n*Customer:* ${customer?.name || 'Walk-in'}\n*Total:* ${currencySymbol} ${doc.grandTotal.toLocaleString()}\n\nGenerated via QuoteFlow Pro`;
-    
-    try {
-      const canShare = await Share.canShare();
-      if (canShare.value) {
-        await Share.share({
-          title: `${doc.type.toUpperCase()} ${doc.docNumber}`,
-          text: shareText,
-          dialogTitle: 'Share Document',
-        });
-        return;
-      }
-
-      if (navigator.share) {
-        await navigator.share({
-          title: `${doc.type.toUpperCase()} ${doc.docNumber}`,
-          text: shareText,
-        });
-      } else {
-        throw new Error('Native share not supported');
-      }
-    } catch (err) {
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(shareText);
-          alert('Details copied to clipboard!');
-        } else {
-          throw new Error('Clipboard API unavailable');
-        }
-      } catch (clipErr) {
-        alert('Sharing failed. Please try printing or downloading as PDF.');
-      }
-    }
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!containerRef.current) return;
+  const generatePDF = async () => {
+    if (!containerRef.current) return null;
     
     const element = containerRef.current.querySelector('.pdf-page') as HTMLElement;
-    if (!element) return;
+    if (!element) return null;
 
     const originalScale = scale;
     const originalTransform = element.style.transform;
@@ -202,15 +168,109 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
         heightLeft -= pageHeight;
       }
       
-      pdf.save(`${doc.type}_${doc.docNumber}.pdf`);
+      return pdf;
     } catch (err) {
       console.error('PDF generation failed', err);
-      alert('Failed to generate PDF. Please try printing instead.');
+      return null;
     } finally {
       // Restore original state
       element.style.transform = originalTransform;
       element.style.marginBottom = originalMargin;
       setScale(originalScale);
+    }
+  };
+
+  const handleShare = async () => {
+    const pdf = await generatePDF();
+    if (!pdf) {
+      alert('Failed to generate PDF for sharing.');
+      return;
+    }
+
+    const fileName = `${doc.type}_${doc.docNumber}.pdf`;
+    const shareText = `*${doc.type.toUpperCase()} DOCUMENT*\n\n*No:* ${doc.docNumber}\n*Date:* ${formatDate(doc.date, settings.general.dateFormat)}\n*Customer:* ${customer?.name || 'Walk-in'}\n*Total:* ${currencySymbol} ${doc.grandTotal.toLocaleString()}\n\nGenerated via QuoteFlow Pro`;
+
+    try {
+      // 1. Try Web Share API (navigator.share) with File object - Most reliable for PDF in browsers/WebViews
+      if (navigator.share) {
+        const blob = pdf.output('blob');
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        
+        const shareData: any = {
+          title: `${doc.type.toUpperCase()} ${doc.docNumber}`,
+          text: shareText,
+        };
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          shareData.files = [file];
+        }
+
+        await navigator.share(shareData);
+        return;
+      }
+
+      // 2. Try Capacitor Share as fallback for text sharing
+      const canShare = await Share.canShare();
+      if (canShare.value) {
+        await Share.share({
+          title: `${doc.type.toUpperCase()} ${doc.docNumber}`,
+          text: shareText,
+          dialogTitle: 'Share Document',
+        });
+        return;
+      }
+
+      // 3. Final fallback: Clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        alert('Details copied to clipboard! PDF sharing not supported on this device.');
+      }
+    } catch (err) {
+      console.error('Sharing failed', err);
+      alert('Sharing failed. Please download the PDF instead.');
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    const pdf = await generatePDF();
+    if (!pdf) {
+      alert('Failed to generate PDF. Please try printing instead.');
+      return;
+    }
+
+    const fileName = `${doc.type}_${doc.docNumber}.pdf`;
+
+    try {
+      // Check if running on native platform (Android/iOS)
+      if (Capacitor.isNativePlatform()) {
+        const base64 = pdf.output('datauristring').split(',')[1];
+        
+        // Save to the Documents directory on native
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: Directory.Documents,
+        });
+
+        alert(`PDF saved to Documents: ${fileName}`);
+        
+        // Try to share it as well so user can choose where to save/open
+        await Share.share({
+          title: fileName,
+          files: [savedFile.uri],
+        });
+      } else {
+        // Standard browser download
+        pdf.save(fileName);
+      }
+    } catch (err) {
+      console.error('Download failed', err);
+      // Fallback to standard save if filesystem fails
+      try {
+        pdf.save(fileName);
+      } catch (e) {
+        alert('Download failed. Please use the Share button instead.');
+      }
     }
   };
 
@@ -238,6 +298,21 @@ const Detail: React.FC<DetailProps> = ({ doc, business, settings, customer, term
           <h2 className="text-lg font-black capitalize tracking-tight">{doc.type.replace('_', ' ')} Detail</h2>
         </div>
         <div className="flex items-center gap-3">
+           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-2 py-1 mr-2">
+             <button 
+               onClick={() => setScale(prev => Math.max(0.3, prev - 0.1))}
+               className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-500 transition-colors"
+             >
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 12H4"/></svg>
+             </button>
+             <span className="text-[10px] font-black w-10 text-center text-slate-600 dark:text-slate-400">{Math.round(scale * 100)}%</span>
+             <button 
+               onClick={() => setScale(prev => Math.min(2, prev + 0.1))}
+               className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-500 transition-colors"
+             >
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>
+             </button>
+           </div>
            <button type="button" onClick={() => window.print()} className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-lg border-2 border-white/20 uppercase tracking-tight active:scale-90 transition-all hover:bg-green-600">PDF</button>
         </div>
       </div>
